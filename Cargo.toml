@@ -1,0 +1,7 @@
+[package]
+name = "vdfr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+structure = "0.1"
