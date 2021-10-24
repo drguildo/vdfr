@@ -33,20 +33,22 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
             app_struct.unpack_from(reader).unwrap();
         println!("size: {}, state: {}, last_update: {}, access_token: {}, checksum: {:?}, change_number: {}", size, state, last_update, access_token, checksum, change_number);
 
-        binary_loads(reader);
+        binary_loads(reader, false);
     }
 }
 
-fn binary_loads<R: std::io::Read>(reader: &mut R) {
+fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) {
     let int32_struct = structure!("<i");
     let uint64_struct = structure!("<Q");
     let int64_struct = structure!("<q");
     let float32_struct = structure!("<f");
 
+    let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
+
     let mut stack_size = 1;
     loop {
         let t = reader.read_u8().unwrap();
-        if t == BIN_END {
+        if t == current_bin_end {
             println!("BIN_END");
             if stack_size > 1 {
                 stack_size -= 1;
