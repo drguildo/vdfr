@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use structure::{
     byteorder::{LittleEndian, ReadBytesExt},
@@ -26,11 +26,10 @@ enum Value {
     UInt64Type(u64),
     Int64Type(i64),
     Float32Type(f32),
-    KeyValueType(Rc<RefCell<Node>>),
+    KeyValueType(Node),
 }
 
 struct Node {
-    parent: Option<Rc<RefCell<Node>>>,
     data: HashMap<String, Value>,
 }
 
@@ -56,7 +55,7 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
     }
 }
 
-fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Rc<RefCell<Node>> {
+fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Node {
     let int32_struct = structure!("<i");
     let uint64_struct = structure!("<Q");
     let int64_struct = structure!("<q");
@@ -64,20 +63,14 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Rc<RefCel
 
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
-    let mut node = Rc::new(RefCell::new(Node {
-        parent: None,
+    let mut node = Node {
         data: HashMap::new(),
-    }));
+    };
 
     loop {
         let t = reader.read_u8().unwrap();
         if t == current_bin_end {
             println!("BIN_END");
-            let parent = node.as_ref().borrow().parent.clone();
-            if let Some(parent) = parent {
-                node = Rc::clone(&parent);
-                continue;
-            }
             return node;
         }
 
@@ -86,44 +79,40 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Rc<RefCel
 
         if t == BIN_NONE {
             println!("BIN_NONE");
-            let subnode = Rc::new(RefCell::new(Node {
-                parent: Some(Rc::clone(&node)),
-                data: HashMap::new(),
-            }));
-            node.as_ref().borrow_mut().data.insert(key, Value::KeyValueType(Rc::clone(&subnode)));
-            node = Rc::clone(&subnode);
+            let subnode = binary_loads(reader, alt_format);
+            node.data.insert(key, Value::KeyValueType(subnode));
         } else if t == BIN_STRING {
             let s = read_string(reader, false);
             println!("BIN_STRING: {}", s);
-            node.as_ref().borrow_mut().data.insert(key, Value::StringType(s));
+            node.data.insert(key, Value::StringType(s));
         } else if t == BIN_WIDESTRING {
             let s = read_string(reader, true);
             println!("BIN_WIDESTRING: {}", s);
-            node.as_ref().borrow_mut().data.insert(key, Value::WideStringType(s));
+            node.data.insert(key, Value::WideStringType(s));
         } else if [BIN_INT32, BIN_POINTER, BIN_COLOR].contains(&t) {
             let (val,) = int32_struct.unpack_from(reader).unwrap();
             if t == BIN_INT32 {
                 println!("BIN_INT32: {}", val);
-                node.as_ref().borrow_mut().data.insert(key, Value::Int32Type(val));
+                node.data.insert(key, Value::Int32Type(val));
             } else if t == BIN_POINTER {
                 println!("BIN_POINTER: {}", val);
-                node.as_ref().borrow_mut().data.insert(key, Value::PointerType(val));
+                node.data.insert(key, Value::PointerType(val));
             } else if t == BIN_COLOR {
                 println!("BIN_COLOR: {}", val);
-                node.as_ref().borrow_mut().data.insert(key, Value::ColorType(val));
+                node.data.insert(key, Value::ColorType(val));
             }
         } else if t == BIN_UINT64 {
             let (val,) = uint64_struct.unpack_from(reader).unwrap();
             println!("BIN_UINT64: {}", val);
-            node.as_ref().borrow_mut().data.insert(key, Value::UInt64Type(val));
+            node.data.insert(key, Value::UInt64Type(val));
         } else if t == BIN_INT64 {
             let (val,) = int64_struct.unpack_from(reader).unwrap();
             println!("BIN_INT64: {}", val);
-            node.as_ref().borrow_mut().data.insert(key, Value::Int64Type(val));
+            node.data.insert(key, Value::Int64Type(val));
         } else if t == BIN_FLOAT32 {
             let (val,) = float32_struct.unpack_from(reader).unwrap();
             println!("BIN_FLOAT32: {}", val);
-            node.as_ref().borrow_mut().data.insert(key, Value::Float32Type(val));
+            node.data.insert(key, Value::Float32Type(val));
         } else {
             // FIXME: Function should return a Result, and this should be an
             // error.
