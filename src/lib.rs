@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use structure::{
-    byteorder::{LittleEndian, ReadBytesExt},
-    structure, structure_impl,
-};
+use byteorder::{LittleEndian, ReadBytesExt};
 
 const BIN_NONE: u8 = b'\x00';
 const BIN_STRING: u8 = b'\x01';
@@ -38,7 +35,6 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
     let version = reader.read_u32::<LittleEndian>().unwrap();
     println!("universe: 0x{:X}, version: {}", universe, version);
 
-    let app_struct = structure!("<3IQ20sI");
     loop {
         let app_id = reader.read_u32::<LittleEndian>().unwrap();
         if app_id == 0 {
@@ -46,8 +42,16 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
             break;
         }
 
-        let (size, state, last_update, access_token, checksum, change_number) =
-            app_struct.unpack_from(reader).unwrap();
+        let size = reader.read_u32::<LittleEndian>().unwrap();
+        let state = reader.read_u32::<LittleEndian>().unwrap();
+        let last_update = reader.read_u32::<LittleEndian>().unwrap();
+        let access_token = reader.read_u64::<LittleEndian>().unwrap();
+
+        let mut checksum: [u8; 20] = [0; 20];
+        reader.read_exact(&mut checksum).unwrap();
+
+        let change_number = reader.read_u32::<LittleEndian>().unwrap();
+
         println!("size: {}, state: {}, last_update: {}, access_token: {}, checksum: {:?}, change_number: {}", size, state, last_update, access_token, checksum, change_number);
 
         binary_loads(reader, false);
