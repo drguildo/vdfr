@@ -34,15 +34,14 @@ struct Node {
 }
 
 pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
-    let universe_version_struct = structure!("<II");
-    let (universe, version) = universe_version_struct.unpack_from(reader).unwrap();
+    let universe = reader.read_u32::<LittleEndian>().unwrap();
+    let version = reader.read_u32::<LittleEndian>().unwrap();
     println!("universe: 0x{:X}, version: {}", universe, version);
 
-    let appid_struct = structure!("<I");
     let app_struct = structure!("<3IQ20sI");
     loop {
-        let app_id = appid_struct.unpack_from(reader).unwrap();
-        if app_id.0 == 0 {
+        let app_id = reader.read_u32::<LittleEndian>().unwrap();
+        if app_id == 0 {
             println!("last appinfo application");
             break;
         }
@@ -56,11 +55,6 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
 }
 
 fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Node {
-    let int32_struct = structure!("<i");
-    let uint64_struct = structure!("<Q");
-    let int64_struct = structure!("<q");
-    let float32_struct = structure!("<f");
-
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
     let mut node = Node {
@@ -90,7 +84,7 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Node {
             println!("BIN_WIDESTRING: {}", s);
             node.data.insert(key, Value::WideStringType(s));
         } else if [BIN_INT32, BIN_POINTER, BIN_COLOR].contains(&t) {
-            let (val,) = int32_struct.unpack_from(reader).unwrap();
+            let val = reader.read_i32::<LittleEndian>().unwrap();
             if t == BIN_INT32 {
                 println!("BIN_INT32: {}", val);
                 node.data.insert(key, Value::Int32Type(val));
@@ -102,15 +96,15 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Node {
                 node.data.insert(key, Value::ColorType(val));
             }
         } else if t == BIN_UINT64 {
-            let (val,) = uint64_struct.unpack_from(reader).unwrap();
+            let val = reader.read_u64::<LittleEndian>().unwrap();
             println!("BIN_UINT64: {}", val);
             node.data.insert(key, Value::UInt64Type(val));
         } else if t == BIN_INT64 {
-            let (val,) = int64_struct.unpack_from(reader).unwrap();
+            let val = reader.read_i64::<LittleEndian>().unwrap();
             println!("BIN_INT64: {}", val);
             node.data.insert(key, Value::Int64Type(val));
         } else if t == BIN_FLOAT32 {
-            let (val,) = float32_struct.unpack_from(reader).unwrap();
+            let val = reader.read_f32::<LittleEndian>().unwrap();
             println!("BIN_FLOAT32: {}", val);
             node.data.insert(key, Value::Float32Type(val));
         } else {
