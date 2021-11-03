@@ -31,12 +31,10 @@ type KeyValue = HashMap<String, Value>;
 pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
     let universe = reader.read_u32::<LittleEndian>().unwrap();
     let version = reader.read_u32::<LittleEndian>().unwrap();
-    println!("universe: 0x{:X}, version: {}", universe, version);
 
     loop {
         let app_id = reader.read_u32::<LittleEndian>().unwrap();
         if app_id == 0 {
-            println!("last appinfo application");
             break;
         }
 
@@ -50,8 +48,6 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
 
         let change_number = reader.read_u32::<LittleEndian>().unwrap();
 
-        println!("size: {}, state: {}, last_update: {}, access_token: {}, checksum: {:?}, change_number: {}", size, state, last_update, access_token, checksum, change_number);
-
         binary_loads(reader, false);
     }
 }
@@ -64,48 +60,37 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> KeyValue 
     loop {
         let t = reader.read_u8().unwrap();
         if t == current_bin_end {
-            println!("BIN_END");
             return node;
         }
 
         let key = read_string(reader, false);
-        println!("KEY: {}", key);
 
         if t == BIN_NONE {
-            println!("BIN_NONE");
             let subnode = binary_loads(reader, alt_format);
             node.insert(key, Value::KeyValueType(subnode));
         } else if t == BIN_STRING {
             let s = read_string(reader, false);
-            println!("BIN_STRING: {}", s);
             node.insert(key, Value::StringType(s));
         } else if t == BIN_WIDESTRING {
             let s = read_string(reader, true);
-            println!("BIN_WIDESTRING: {}", s);
             node.insert(key, Value::WideStringType(s));
         } else if [BIN_INT32, BIN_POINTER, BIN_COLOR].contains(&t) {
             let val = reader.read_i32::<LittleEndian>().unwrap();
             if t == BIN_INT32 {
-                println!("BIN_INT32: {}", val);
                 node.insert(key, Value::Int32Type(val));
             } else if t == BIN_POINTER {
-                println!("BIN_POINTER: {}", val);
                 node.insert(key, Value::PointerType(val));
             } else if t == BIN_COLOR {
-                println!("BIN_COLOR: {}", val);
                 node.insert(key, Value::ColorType(val));
             }
         } else if t == BIN_UINT64 {
             let val = reader.read_u64::<LittleEndian>().unwrap();
-            println!("BIN_UINT64: {}", val);
             node.insert(key, Value::UInt64Type(val));
         } else if t == BIN_INT64 {
             let val = reader.read_i64::<LittleEndian>().unwrap();
-            println!("BIN_INT64: {}", val);
             node.insert(key, Value::Int64Type(val));
         } else if t == BIN_FLOAT32 {
             let val = reader.read_f32::<LittleEndian>().unwrap();
-            println!("BIN_FLOAT32: {}", val);
             node.insert(key, Value::Float32Type(val));
         } else {
             // FIXME: Function should return a Result, and this should be an
