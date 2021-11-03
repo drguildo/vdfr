@@ -28,9 +28,31 @@ enum Value {
 
 type KeyValue = HashMap<String, Value>;
 
+struct App {
+    size: u32,
+    state: u32,
+    last_update: u32,
+    access_token: u64,
+    checksum: [u8; 20],
+    change_number: u32,
+    key_values: KeyValue,
+}
+
+struct AppInfo {
+    universe: u32,
+    version: u32,
+    apps: HashMap<u32, App>,
+}
+
 pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
     let universe = reader.read_u32::<LittleEndian>().unwrap();
     let version = reader.read_u32::<LittleEndian>().unwrap();
+
+    let mut appinfo = AppInfo {
+        universe,
+        version,
+        apps: HashMap::new(),
+    };
 
     loop {
         let app_id = reader.read_u32::<LittleEndian>().unwrap();
@@ -48,7 +70,18 @@ pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
 
         let change_number = reader.read_u32::<LittleEndian>().unwrap();
 
-        binary_loads(reader, false);
+        let key_values = binary_loads(reader, false);
+
+        let app = App {
+            size,
+            state,
+            last_update,
+            access_token,
+            checksum,
+            change_number,
+            key_values,
+        };
+        appinfo.apps.insert(app_id, app);
     }
 }
 
