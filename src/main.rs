@@ -1,4 +1,7 @@
+use std::{fs, io::Cursor};
+
 fn main() {
-    let mut appinfo_file = std::fs::File::open("appinfo.vdf").unwrap();
-    vdfr::appinfo_loads(&mut appinfo_file);
+    let appinfo_bytes = fs::read("appinfo.vdf").expect("Failed to read appinfo.vdf");
+    let mut cursor = Cursor::new(appinfo_bytes);
+    vdfr::appinfo_loads(&mut cursor);
 }
