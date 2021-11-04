@@ -14,7 +14,7 @@ const BIN_END: u8 = b'\x08';
 const BIN_INT64: u8 = b'\x0A';
 const BIN_END_ALT: u8 = b'\x0B';
 
-enum Value {
+pub enum Value {
     StringType(String),
     WideStringType(String),
     Int32Type(i32),
@@ -28,20 +28,20 @@ enum Value {
 
 type KeyValue = HashMap<String, Value>;
 
-struct App {
-    size: u32,
-    state: u32,
-    last_update: u32,
-    access_token: u64,
-    checksum: [u8; 20],
-    change_number: u32,
-    key_values: KeyValue,
+pub struct App {
+    pub size: u32,
+    pub state: u32,
+    pub last_update: u32,
+    pub access_token: u64,
+    pub checksum: [u8; 20],
+    pub change_number: u32,
+    pub key_values: KeyValue,
 }
 
 pub struct AppInfo {
-    universe: u32,
-    version: u32,
-    apps: HashMap<u32, App>,
+    pub universe: u32,
+    pub version: u32,
+    pub apps: HashMap<u32, App>,
 }
 
 impl AppInfo {
