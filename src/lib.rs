@@ -38,50 +38,54 @@ struct App {
     key_values: KeyValue,
 }
 
-struct AppInfo {
+pub struct AppInfo {
     universe: u32,
     version: u32,
     apps: HashMap<u32, App>,
 }
 
-pub fn appinfo_loads<R: std::io::Read>(reader: &mut R) {
-    let universe = reader.read_u32::<LittleEndian>().unwrap();
-    let version = reader.read_u32::<LittleEndian>().unwrap();
+impl AppInfo {
+    pub fn load<R: std::io::Read>(reader: &mut R) -> AppInfo {
+        let universe = reader.read_u32::<LittleEndian>().unwrap();
+        let version = reader.read_u32::<LittleEndian>().unwrap();
 
-    let mut appinfo = AppInfo {
-        universe,
-        version,
-        apps: HashMap::new(),
-    };
+        let mut appinfo = AppInfo {
+            universe,
+            version,
+            apps: HashMap::new(),
+        };
 
-    loop {
-        let app_id = reader.read_u32::<LittleEndian>().unwrap();
-        if app_id == 0 {
-            break;
+        loop {
+            let app_id = reader.read_u32::<LittleEndian>().unwrap();
+            if app_id == 0 {
+                break;
+            }
+
+            let size = reader.read_u32::<LittleEndian>().unwrap();
+            let state = reader.read_u32::<LittleEndian>().unwrap();
+            let last_update = reader.read_u32::<LittleEndian>().unwrap();
+            let access_token = reader.read_u64::<LittleEndian>().unwrap();
+
+            let mut checksum: [u8; 20] = [0; 20];
+            reader.read_exact(&mut checksum).unwrap();
+
+            let change_number = reader.read_u32::<LittleEndian>().unwrap();
+
+            let key_values = binary_loads(reader, false);
+
+            let app = App {
+                size,
+                state,
+                last_update,
+                access_token,
+                checksum,
+                change_number,
+                key_values,
+            };
+            appinfo.apps.insert(app_id, app);
         }
 
-        let size = reader.read_u32::<LittleEndian>().unwrap();
-        let state = reader.read_u32::<LittleEndian>().unwrap();
-        let last_update = reader.read_u32::<LittleEndian>().unwrap();
-        let access_token = reader.read_u64::<LittleEndian>().unwrap();
-
-        let mut checksum: [u8; 20] = [0; 20];
-        reader.read_exact(&mut checksum).unwrap();
-
-        let change_number = reader.read_u32::<LittleEndian>().unwrap();
-
-        let key_values = binary_loads(reader, false);
-
-        let app = App {
-            size,
-            state,
-            last_update,
-            access_token,
-            checksum,
-            change_number,
-            key_values,
-        };
-        appinfo.apps.insert(app_id, app);
+        appinfo
     }
 }
 
