@@ -46,8 +46,8 @@ pub struct AppInfo {
 
 impl AppInfo {
     pub fn load<R: std::io::Read>(reader: &mut R) -> AppInfo {
-        let universe = reader.read_u32::<LittleEndian>().unwrap();
         let version = reader.read_u32::<LittleEndian>().unwrap();
+        let universe = reader.read_u32::<LittleEndian>().unwrap();
 
         let mut appinfo = AppInfo {
             universe,
