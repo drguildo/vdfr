@@ -14,6 +14,7 @@ const BIN_END: u8 = b'\x08';
 const BIN_INT64: u8 = b'\x0A';
 const BIN_END_ALT: u8 = b'\x0B';
 
+#[derive(Debug)]
 pub enum Value {
     StringType(String),
     WideStringType(String),
