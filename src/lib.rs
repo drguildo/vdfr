@@ -90,6 +90,37 @@ impl AppInfo {
     }
 }
 
+pub fn packageinfo_loads<R: std::io::Read>(reader: &mut R) {
+    let version = reader.read_u32::<LittleEndian>().unwrap();
+    let universe = reader.read_u32::<LittleEndian>().unwrap();
+    println!("version: {:#x} universe: {}", version, universe);
+
+    loop {
+        let package_id = reader.read_u32::<LittleEndian>().unwrap();
+        println!("package_id: {:?}", package_id);
+
+        if package_id == 0xffffffff {
+            break;
+        }
+
+        let mut checksum: [u8; 20] = [0; 20];
+        reader.read_exact(&mut checksum).unwrap();
+        println!("checksum: {:?}", checksum);
+
+        let change_number = reader.read_u32::<LittleEndian>().unwrap();
+        println!("{}", change_number);
+
+        // XXX: No idea what this is. Seems to get ignored in vdf.py.
+        let pics = reader.read_u64::<LittleEndian>().unwrap();
+        println!("pics: {}", pics);
+
+        let kv = binary_loads(reader, false);
+        for (k, v) in &kv {
+            println!("key: {} value: {:?}", k, v);
+        }
+    }
+}
+
 fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> KeyValue {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
