@@ -90,34 +90,59 @@ impl AppInfo {
     }
 }
 
-pub fn packageinfo_loads<R: std::io::Read>(reader: &mut R) {
-    let version = reader.read_u32::<LittleEndian>().unwrap();
-    let universe = reader.read_u32::<LittleEndian>().unwrap();
-    println!("version: {:#x} universe: {}", version, universe);
+pub struct Package {
+    pub checksum: [u8; 20],
+    pub change_number: u32,
+    pub pics: u64,
+    pub key_values: KeyValue,
+}
 
-    loop {
-        let package_id = reader.read_u32::<LittleEndian>().unwrap();
-        println!("package_id: {:?}", package_id);
+pub struct PackageInfo {
+    pub version: u32,
+    pub universe: u32,
+    pub packages: HashMap<u32, Package>,
+}
 
-        if package_id == 0xffffffff {
-            break;
+impl PackageInfo {
+    pub fn load<R: std::io::Read>(reader: &mut R) -> PackageInfo {
+        let version = reader.read_u32::<LittleEndian>().unwrap();
+        let universe = reader.read_u32::<LittleEndian>().unwrap();
+        println!("version: {:#x} universe: {}", version, universe);
+
+        let mut packageinfo = PackageInfo {
+            version,
+            universe,
+            packages: HashMap::new(),
+        };
+
+        loop {
+            let package_id = reader.read_u32::<LittleEndian>().unwrap();
+
+            if package_id == 0xffffffff {
+                break;
+            }
+
+            let mut checksum: [u8; 20] = [0; 20];
+            reader.read_exact(&mut checksum).unwrap();
+
+            let change_number = reader.read_u32::<LittleEndian>().unwrap();
+
+            // XXX: No idea what this is. Seems to get ignored in vdf.py.
+            let pics = reader.read_u64::<LittleEndian>().unwrap();
+
+            let key_values = binary_loads(reader, false);
+
+            let package = Package {
+                checksum,
+                change_number,
+                pics,
+                key_values,
+            };
+
+            packageinfo.packages.insert(package_id, package);
         }
 
-        let mut checksum: [u8; 20] = [0; 20];
-        reader.read_exact(&mut checksum).unwrap();
-        println!("checksum: {:?}", checksum);
-
-        let change_number = reader.read_u32::<LittleEndian>().unwrap();
-        println!("{}", change_number);
-
-        // XXX: No idea what this is. Seems to get ignored in vdf.py.
-        let pics = reader.read_u64::<LittleEndian>().unwrap();
-        println!("pics: {}", pics);
-
-        let kv = binary_loads(reader, false);
-        for (k, v) in &kv {
-            println!("key: {} value: {:?}", k, v);
-        }
+        packageinfo
     }
 }
 
