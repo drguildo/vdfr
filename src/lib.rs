@@ -40,8 +40,8 @@ pub struct App {
 }
 
 pub struct AppInfo {
-    pub universe: u32,
     pub version: u32,
+    pub universe: u32,
     pub apps: HashMap<u32, App>,
 }
 
