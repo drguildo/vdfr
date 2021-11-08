@@ -110,7 +110,6 @@ impl PackageInfo {
     pub fn load<R: std::io::Read>(reader: &mut R) -> Result<PackageInfo, Error> {
         let version = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
-        println!("version: {:#x} universe: {}", version, universe);
 
         let mut packageinfo = PackageInfo {
             version,
