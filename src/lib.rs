@@ -75,7 +75,7 @@ impl AppInfo {
 
             let change_number = reader.read_u32::<LittleEndian>()?;
 
-            let key_values = binary_loads(reader, false)?;
+            let key_values = read_kv(reader, false)?;
 
             let app = App {
                 size,
@@ -132,7 +132,7 @@ impl PackageInfo {
             // XXX: No idea what this is. Seems to get ignored in vdf.py.
             let pics = reader.read_u64::<LittleEndian>()?;
 
-            let key_values = binary_loads(reader, false)?;
+            let key_values = read_kv(reader, false)?;
 
             let package = Package {
                 checksum,
@@ -148,7 +148,7 @@ impl PackageInfo {
     }
 }
 
-fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, Error> {
+fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, Error> {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
     let mut node = KeyValue::new();
@@ -162,7 +162,7 @@ fn binary_loads<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<Ke
         let key = read_string(reader, false)?;
 
         if t == BIN_NONE {
-            let subnode = binary_loads(reader, alt_format)?;
+            let subnode = read_kv(reader, alt_format)?;
             node.insert(key, Value::KeyValueType(subnode));
         } else if t == BIN_STRING {
             let s = read_string(reader, false)?;
