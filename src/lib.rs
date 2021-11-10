@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    io::{Error, ErrorKind},
-};
+use std::{collections::HashMap, io::Error};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -16,6 +13,29 @@ const BIN_UINT64: u8 = b'\x07';
 const BIN_END: u8 = b'\x08';
 const BIN_INT64: u8 = b'\x0A';
 const BIN_END_ALT: u8 = b'\x0B';
+
+#[derive(Debug)]
+pub enum VdfrError {
+    InvalidType(u8),
+    ReadError(std::io::Error),
+}
+
+impl std::error::Error for VdfrError {}
+
+impl std::fmt::Display for VdfrError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            VdfrError::InvalidType(t) => write!(f, "Invalid type {:#x}", t),
+            VdfrError::ReadError(e) => e.fmt(f),
+        }
+    }
+}
+
+impl From<std::io::Error> for VdfrError {
+    fn from(e: std::io::Error) -> Self {
+        VdfrError::ReadError(e)
+    }
+}
 
 #[derive(Debug)]
 pub enum Value {
@@ -49,7 +69,7 @@ pub struct AppInfo {
 }
 
 impl AppInfo {
-    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<AppInfo, Error> {
+    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<AppInfo, VdfrError> {
         let version = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
 
@@ -107,7 +127,7 @@ pub struct PackageInfo {
 }
 
 impl PackageInfo {
-    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<PackageInfo, Error> {
+    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<PackageInfo, VdfrError> {
         let version = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
 
@@ -148,7 +168,7 @@ impl PackageInfo {
     }
 }
 
-fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, Error> {
+fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, VdfrError> {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
     let mut node = KeyValue::new();
@@ -189,10 +209,7 @@ fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValu
             let val = reader.read_f32::<LittleEndian>()?;
             node.insert(key, Value::Float32Type(val));
         } else {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("Invalid type: 0x{:X}", t),
-            ));
+            return Err(VdfrError::InvalidType(t));
         }
     }
 }
