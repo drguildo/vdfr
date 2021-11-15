@@ -115,6 +115,33 @@ impl AppInfo {
     }
 }
 
+impl App {
+    // Search for the specified sequence of keys in the key-value data. The
+    // order of the keys dictates the hierarchy, with all except the last having
+    // to be a Value::KeyValueType.
+    pub fn get<'a>(&'a self, keys: &[&str]) -> Option<&Value> {
+        self.get_recursive(&self.key_values, keys)
+    }
+
+    fn get_recursive<'a>(&'a self, kv: &'a KeyValue, keys: &[&str]) -> Option<&Value> {
+        if keys.len() == 0 {
+            return None;
+        }
+
+        let key = keys.first().unwrap();
+        let value = kv.get(&key.to_string());
+        if keys.len() == 1 {
+            value
+        } else {
+            if let Some(Value::KeyValueType(kv)) = value {
+                self.get_recursive(&kv, &keys[1..])
+            } else {
+                None
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Package {
     pub checksum: [u8; 20],
