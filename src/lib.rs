@@ -52,6 +52,7 @@ pub enum Value {
 
 type KeyValue = HashMap<String, Value>;
 
+#[derive(Debug)]
 pub struct App {
     pub size: u32,
     pub state: u32,
@@ -62,6 +63,7 @@ pub struct App {
     pub key_values: KeyValue,
 }
 
+#[derive(Debug)]
 pub struct AppInfo {
     pub version: u32,
     pub universe: u32,
@@ -113,6 +115,7 @@ impl AppInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct Package {
     pub checksum: [u8; 20],
     pub change_number: u32,
@@ -120,6 +123,7 @@ pub struct Package {
     pub key_values: KeyValue,
 }
 
+#[derive(Debug)]
 pub struct PackageInfo {
     pub version: u32,
     pub universe: u32,
