@@ -1,23 +1,24 @@
 use std::{fs, io::BufReader};
 
+use vdfr::{AppInfo, PackageInfo};
+
 fn main() {
-    read_appinfo();
+    let appinfo = read_appinfo();
+    for (id, app) in appinfo.apps {
+        println!("{:?}", app.get(&["appinfo", "common", "library_assets"]));
+    }
 }
 
-fn read_appinfo() {
+fn read_appinfo() -> AppInfo {
     let mut appinfo_file =
         BufReader::new(fs::File::open("appinfo.vdf").expect("Failed to read appinfo.vdf"));
     let appinfo = vdfr::AppInfo::load(&mut appinfo_file);
-    for (app_id, _) in &appinfo.unwrap().apps {
-        println!("{}", app_id);
-    }
+    return appinfo.unwrap();
 }
 
-fn read_packageinfo() {
+fn read_packageinfo() -> PackageInfo {
     let mut packageinfo_file =
         BufReader::new(fs::File::open("packageinfo.vdf").expect("Failed to read packageinfo.vdf"));
     let packageinfo = vdfr::PackageInfo::load(&mut packageinfo_file);
-    for (package_id, _) in &packageinfo.unwrap().packages {
-        println!("{}", package_id);
-    }
+    return packageinfo.unwrap();
 }
