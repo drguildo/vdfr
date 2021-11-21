@@ -1,24 +1,51 @@
 use std::{fs, io::BufReader};
 
+use clap::{App, Arg, SubCommand};
 use vdfr::{AppInfo, PackageInfo};
 
 fn main() {
-    let appinfo = read_appinfo();
-    for (id, app) in appinfo.apps {
-        println!("{:?}", app.get(&["appinfo", "common", "library_assets"]));
+    let matches = App::new(clap::crate_name!())
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
+        .about(clap::crate_description!())
+        .subcommand(
+            SubCommand::with_name("app").arg(
+                Arg::with_name("path")
+                    .takes_value(true)
+                    .default_value("appinfo.vdf"),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("pkg").arg(
+                Arg::with_name("path")
+                    .takes_value(true)
+                    .default_value("packageinfo.vdf"),
+            ),
+        )
+        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+        .get_matches();
+
+    if let Some(matches) = matches.subcommand_matches("app") {
+        let path = matches.value_of("path").unwrap();
+        let appinfo = read_appinfo(path);
+    }
+
+    if let Some(matches) = matches.subcommand_matches("pkg") {
+        let path = matches.value_of("path").unwrap();
+        let packageinfo = read_packageinfo(path);
     }
 }
 
-fn read_appinfo() -> AppInfo {
+fn read_appinfo(path: &str) -> AppInfo {
     let mut appinfo_file =
-        BufReader::new(fs::File::open("appinfo.vdf").expect("Failed to read appinfo.vdf"));
+        BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
     let appinfo = vdfr::AppInfo::load(&mut appinfo_file);
     return appinfo.unwrap();
 }
 
-fn read_packageinfo() -> PackageInfo {
+fn read_packageinfo(path: &str) -> PackageInfo {
     let mut packageinfo_file =
-        BufReader::new(fs::File::open("packageinfo.vdf").expect("Failed to read packageinfo.vdf"));
+        BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
     let packageinfo = vdfr::PackageInfo::load(&mut packageinfo_file);
     return packageinfo.unwrap();
 }
