@@ -1,5 +1,6 @@
 [package]
 name = "vdf"
+description = "A tool for interrogating files that use Valve's binary VDF format."
 version = "0.1.0"
 edition = "2021"
 
