@@ -9,18 +9,22 @@ fn main() {
         .author(clap::crate_authors!())
         .about(clap::crate_description!())
         .subcommand(
-            SubCommand::with_name("app").arg(
-                Arg::with_name("path")
-                    .takes_value(true)
-                    .default_value("appinfo.vdf"),
-            ),
+            SubCommand::with_name("app")
+                .arg(
+                    Arg::with_name("path")
+                        .takes_value(true)
+                        .default_value("appinfo.vdf"),
+                )
+                .arg(Arg::with_name("id").takes_value(true)),
         )
         .subcommand(
-            SubCommand::with_name("pkg").arg(
-                Arg::with_name("path")
-                    .takes_value(true)
-                    .default_value("packageinfo.vdf"),
-            ),
+            SubCommand::with_name("pkg")
+                .arg(
+                    Arg::with_name("path")
+                        .takes_value(true)
+                        .default_value("packageinfo.vdf"),
+                )
+                .arg(Arg::with_name("id").takes_value(true)),
         )
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .get_matches();
