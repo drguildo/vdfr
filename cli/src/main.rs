@@ -12,19 +12,21 @@ fn main() {
             SubCommand::with_name("app")
                 .arg(
                     Arg::with_name("path")
+                        .long("path")
                         .takes_value(true)
                         .default_value("appinfo.vdf"),
                 )
-                .arg(Arg::with_name("id").takes_value(true)),
+                .arg(Arg::with_name("id").long("id").takes_value(true)),
         )
         .subcommand(
             SubCommand::with_name("pkg")
                 .arg(
                     Arg::with_name("path")
+                        .long("path")
                         .takes_value(true)
                         .default_value("packageinfo.vdf"),
                 )
-                .arg(Arg::with_name("id").takes_value(true)),
+                .arg(Arg::with_name("id").long("id").takes_value(true)),
         )
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .get_matches();
