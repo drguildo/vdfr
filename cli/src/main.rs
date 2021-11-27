@@ -16,7 +16,13 @@ fn main() {
                         .takes_value(true)
                         .default_value("appinfo.vdf"),
                 )
-                .arg(Arg::with_name("id").long("id").takes_value(true)),
+                .arg(Arg::with_name("id").long("id").takes_value(true))
+                .arg(
+                    Arg::with_name("keys")
+                        .long("keys")
+                        .multiple(true)
+                        .takes_value(true),
+                ),
         )
         .subcommand(
             SubCommand::with_name("pkg")
@@ -26,7 +32,13 @@ fn main() {
                         .takes_value(true)
                         .default_value("packageinfo.vdf"),
                 )
-                .arg(Arg::with_name("id").long("id").takes_value(true)),
+                .arg(Arg::with_name("id").long("id").takes_value(true))
+                .arg(
+                    Arg::with_name("keys")
+                        .long("keys")
+                        .multiple(true)
+                        .takes_value(true),
+                ),
         )
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .get_matches();
@@ -34,11 +46,58 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("app") {
         let path = matches.value_of("path").unwrap();
         let appinfo = read_appinfo(path);
+        if let Some(id) = matches.value_of("id") {
+            let id: u32 = id.parse().expect("Failed to convert ID to u32");
+            let app = appinfo.apps.get(&id);
+            if let Some(app) = app {
+                if let Some(keys) = matches.values_of("keys") {
+                    let keys: Vec<&str> = keys.collect();
+                    println!("{:?}", app.get(&keys));
+                } else {
+                    println!("{:?}", app);
+                }
+            } else {
+                eprintln!("Failed to find app with ID {}", id);
+            }
+        } else {
+            if let Some(keys) = matches.values_of("keys") {
+                let keys: Vec<&str> = keys.collect();
+                for (id, app) in appinfo.apps {
+                    println!("{}: {:?}", id, app.get(&keys));
+                }
+            } else {
+                for (id, app) in appinfo.apps {
+                    println!("{}: {:?}", id, app);
+                }
+            }
+        }
     }
 
     if let Some(matches) = matches.subcommand_matches("pkg") {
         let path = matches.value_of("path").unwrap();
         let packageinfo = read_packageinfo(path);
+        if let Some(id) = matches.value_of("id") {
+            let id: u32 = id.parse().expect("Failed to convert ID to u32");
+            let package = packageinfo.packages.get(&id);
+            if let Some(package) = package {
+                if let Some(keys) = matches.values_of("keys") {
+                    let keys: Vec<&str> = keys.collect();
+                } else {
+                    println!("{:?}", package);
+                }
+            } else {
+                eprintln!("Failed to find package with ID {}", id);
+            }
+        } else {
+            if let Some(keys) = matches.values_of("keys") {
+                let keys: Vec<&str> = keys.collect();
+                for (id, package) in packageinfo.packages {}
+            } else {
+                for (id, package) in packageinfo.packages {
+                    println!("{}: {:?}", id, package);
+                }
+            }
+        }
     }
 }
 
