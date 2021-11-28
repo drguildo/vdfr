@@ -137,7 +137,7 @@ impl AppInfo {
 }
 
 impl App {
-    pub fn get<'a>(&'a self, keys: &[&str]) -> Option<&Value> {
+    pub fn get(&self, keys: &[&str]) -> Option<&Value> {
         find_keys(&self.key_values, keys)
     }
 }
