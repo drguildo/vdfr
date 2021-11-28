@@ -199,6 +199,12 @@ impl PackageInfo {
     }
 }
 
+impl Package {
+    pub fn get(&self, keys: &[&str]) -> Option<&Value> {
+        find_keys(&self.key_values, keys)
+    }
+}
+
 fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, VdfrError> {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 

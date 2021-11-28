@@ -82,6 +82,7 @@ fn main() {
             if let Some(package) = package {
                 if let Some(keys) = matches.values_of("keys") {
                     let keys: Vec<&str> = keys.collect();
+                    println!("{:?}", package.get(&keys));
                 } else {
                     println!("{:?}", package);
                 }
@@ -91,7 +92,9 @@ fn main() {
         } else {
             if let Some(keys) = matches.values_of("keys") {
                 let keys: Vec<&str> = keys.collect();
-                for (id, package) in packageinfo.packages {}
+                for (id, package) in packageinfo.packages {
+                    println!("{}: {:?}", id, package.get(&keys));
+                }
             } else {
                 for (id, package) in packageinfo.packages {
                     println!("{}: {:?}", id, package);
