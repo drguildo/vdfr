@@ -79,7 +79,8 @@ pub struct App {
     pub state: u32,
     pub last_update: u32,
     pub access_token: u64,
-    pub checksum: [u8; 20],
+    pub checksum_txt: [u8; 20],
+    pub checksum_bin: [u8; 20],
     pub change_number: u32,
     pub key_values: KeyValue,
 }
@@ -113,10 +114,14 @@ impl AppInfo {
             let last_update = reader.read_u32::<LittleEndian>()?;
             let access_token = reader.read_u64::<LittleEndian>()?;
 
-            let mut checksum: [u8; 20] = [0; 20];
-            reader.read_exact(&mut checksum)?;
+            let mut checksum_txt: [u8; 20] = [0; 20];
+            reader.read_exact(&mut checksum_txt)?;
 
             let change_number = reader.read_u32::<LittleEndian>()?;
+
+            
+            let mut checksum_bin: [u8; 20] = [0; 20];
+            reader.read_exact(&mut checksum_bin)?;
 
             let key_values = read_kv(reader, false)?;
 
@@ -125,7 +130,8 @@ impl AppInfo {
                 state,
                 last_update,
                 access_token,
-                checksum,
+                checksum_txt,
+                checksum_bin,
                 change_number,
                 key_values,
             };
