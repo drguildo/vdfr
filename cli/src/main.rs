@@ -1,58 +1,50 @@
 use std::{fs, io::BufReader};
 
-use clap::{App, Arg, SubCommand};
+use clap::{value_parser, Arg, Command};
 use vdfr::{AppInfo, PackageInfo};
 
 fn main() {
-    let matches = App::new(clap::crate_name!())
+    let matches = Command::new(clap::crate_name!())
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about(clap::crate_description!())
         .subcommand(
-            SubCommand::with_name("app")
+            Command::new("app")
+                .arg(Arg::new("path").long("path").default_value("appinfo.vdf"))
                 .arg(
-                    Arg::with_name("path")
-                        .long("path")
-                        .takes_value(true)
-                        .default_value("appinfo.vdf"),
+                    Arg::new("id")
+                        .long("id")
+                        .value_parser(value_parser!(String)),
                 )
-                .arg(Arg::with_name("id").long("id").takes_value(true))
-                .arg(
-                    Arg::with_name("keys")
-                        .long("keys")
-                        .multiple(true)
-                        .takes_value(true),
-                ),
+                .arg(Arg::new("keys").long("keys").value_delimiter(',')),
         )
         .subcommand(
-            SubCommand::with_name("pkg")
+            Command::new("pkg")
                 .arg(
-                    Arg::with_name("path")
+                    Arg::new("path")
                         .long("path")
-                        .takes_value(true)
                         .default_value("packageinfo.vdf"),
                 )
-                .arg(Arg::with_name("id").long("id").takes_value(true))
                 .arg(
-                    Arg::with_name("keys")
-                        .long("keys")
-                        .multiple(true)
-                        .takes_value(true),
-                ),
+                    Arg::new("id")
+                        .long("id")
+                        .value_parser(value_parser!(String)),
+                )
+                .arg(Arg::new("keys").long("keys").value_delimiter(',')),
         )
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
+        .arg_required_else_help(true)
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("app") {
-        let path = matches.value_of("path").unwrap();
+        let path = matches.get_one::<String>("path").unwrap();
         let appinfo = read_appinfo(path);
-        if let Some(id) = matches.value_of("id") {
+        if let Some(id) = matches.get_one::<String>("id") {
             let id: u32 = id.parse().expect("Failed to convert ID to u32");
             let app = appinfo.apps.get(&id);
             if let Some(app) = app {
-                if let Some(keys) = matches.values_of("keys") {
-                    let keys: Vec<&str> = keys.collect();
-                    println!("{:?}", app.get(&keys));
+                if let Some(values) = matches.get_many::<String>("keys") {
+                    let keys: Vec<&str> = values.map(|s| s.as_str()).collect();
+                    println!("{:?}", app.get(keys.as_slice()));
                 } else {
                     println!("{:?}", app);
                 }
@@ -60,8 +52,8 @@ fn main() {
                 eprintln!("Failed to find app with ID {}", id);
             }
         } else {
-            if let Some(keys) = matches.values_of("keys") {
-                let keys: Vec<&str> = keys.collect();
+            if let Some(keys) = matches.get_many::<String>("keys") {
+                let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
                 for (id, app) in appinfo.apps {
                     println!("{}: {:?}", id, app.get(&keys));
                 }
@@ -74,15 +66,15 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("pkg") {
-        let path = matches.value_of("path").unwrap();
+        let path = matches.get_one::<String>("path").unwrap();
         let packageinfo = read_packageinfo(path);
-        if let Some(id) = matches.value_of("id") {
+        if let Some(id) = matches.get_one::<String>("id") {
             let id: u32 = id.parse().expect("Failed to convert ID to u32");
             let package = packageinfo.packages.get(&id);
             if let Some(package) = package {
-                if let Some(keys) = matches.values_of("keys") {
-                    let keys: Vec<&str> = keys.collect();
-                    println!("{:?}", package.get(&keys));
+                if let Some(values) = matches.get_many::<String>("keys") {
+                    let keys: Vec<&str> = values.map(|s| s.as_str()).collect();
+                    println!("{:?}", package.get(keys.as_slice()));
                 } else {
                     println!("{:?}", package);
                 }
@@ -90,8 +82,8 @@ fn main() {
                 eprintln!("Failed to find package with ID {}", id);
             }
         } else {
-            if let Some(keys) = matches.values_of("keys") {
-                let keys: Vec<&str> = keys.collect();
+            if let Some(keys) = matches.get_many::<String>("keys") {
+                let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
                 for (id, package) in packageinfo.packages {
                     println!("{}: {:?}", id, package.get(&keys));
                 }

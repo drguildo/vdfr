@@ -3,3 +3,4 @@ members = [
     "vdfr",
     "cli",
 ]
+resolver = "2"

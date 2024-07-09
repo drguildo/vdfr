@@ -119,7 +119,6 @@ impl AppInfo {
 
             let change_number = reader.read_u32::<LittleEndian>()?;
 
-            
             let mut checksum_bin: [u8; 20] = [0; 20];
             reader.read_exact(&mut checksum_bin)?;
 
