@@ -47,15 +47,15 @@ pub enum Value {
     UInt64Type(u64),
     Int64Type(i64),
     Float32Type(f32),
-    KeyValueType(KeyValue),
+    KeyValueType(KeyValues),
 }
 
-type KeyValue = HashMap<String, Value>;
+type KeyValues = HashMap<String, Value>;
 
 // Recursively search for the specified sequence of keys in the key-value data.
 // The order of the keys dictates the hierarchy, with all except the last having
 // to be a Value::KeyValueType.
-fn find_keys<'a>(kv: &'a KeyValue, keys: &[&str]) -> Option<&'a Value> {
+fn find_keys<'a>(kv: &'a KeyValues, keys: &[&str]) -> Option<&'a Value> {
     if keys.len() == 0 {
         return None;
     }
@@ -82,24 +82,24 @@ pub struct App {
     pub checksum_txt: [u8; 20],
     pub checksum_bin: [u8; 20],
     pub change_number: u32,
-    pub key_values: KeyValue,
+    pub key_values: KeyValues,
 }
 
 #[derive(Debug)]
 pub struct AppInfo {
-    pub version: u32,
+    pub magic: u32,
     pub universe: u32,
     pub apps: HashMap<u32, App>,
 }
 
 impl AppInfo {
     pub fn load<R: std::io::Read>(reader: &mut R) -> Result<AppInfo, VdfrError> {
-        let version = reader.read_u32::<LittleEndian>()?;
+        let magic = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
 
         let mut appinfo = AppInfo {
             universe,
-            version,
+            magic,
             apps: HashMap::new(),
         };
 
@@ -152,23 +152,23 @@ pub struct Package {
     pub checksum: [u8; 20],
     pub change_number: u32,
     pub pics: u64,
-    pub key_values: KeyValue,
+    pub key_values: KeyValues,
 }
 
 #[derive(Debug)]
 pub struct PackageInfo {
-    pub version: u32,
+    pub magic: u32,
     pub universe: u32,
     pub packages: HashMap<u32, Package>,
 }
 
 impl PackageInfo {
     pub fn load<R: std::io::Read>(reader: &mut R) -> Result<PackageInfo, VdfrError> {
-        let version = reader.read_u32::<LittleEndian>()?;
+        let magic = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
 
         let mut packageinfo = PackageInfo {
-            version,
+            magic,
             universe,
             packages: HashMap::new(),
         };
@@ -210,10 +210,10 @@ impl Package {
     }
 }
 
-fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValue, VdfrError> {
+fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValues, VdfrError> {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
-    let mut node = KeyValue::new();
+    let mut node = KeyValues::new();
 
     loop {
         let t = reader.read_u8()?;
