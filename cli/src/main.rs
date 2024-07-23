@@ -99,13 +99,13 @@ fn main() {
 fn read_appinfo(path: &str) -> AppInfo {
     let mut appinfo_file =
         BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
-    let appinfo = vdfr::AppInfo::load(&mut appinfo_file);
+    let appinfo = vdfr::AppInfo::read(&mut appinfo_file);
     return appinfo.unwrap();
 }
 
 fn read_packageinfo(path: &str) -> PackageInfo {
     let mut packageinfo_file =
         BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
-    let packageinfo = vdfr::PackageInfo::load(&mut packageinfo_file);
+    let packageinfo = vdfr::PackageInfo::read(&mut packageinfo_file);
     return packageinfo.unwrap();
 }
