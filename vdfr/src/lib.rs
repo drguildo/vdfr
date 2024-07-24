@@ -65,7 +65,7 @@ type KeyValues = HashMap<String, Value>;
 // The order of the keys dictates the hierarchy, with all except the last having
 // to be a Value::KeyValueType.
 fn find_keys<'a>(kv: &'a KeyValues, keys: &[&str]) -> Option<&'a Value> {
-    if keys.len() == 0 {
+    if keys.is_empty() {
         return None;
     }
 
@@ -73,12 +73,10 @@ fn find_keys<'a>(kv: &'a KeyValues, keys: &[&str]) -> Option<&'a Value> {
     let value = kv.get(&key.to_string());
     if keys.len() == 1 {
         value
+    } else if let Some(Value::KeyValueType(kv)) = value {
+        find_keys(kv, &keys[1..])
     } else {
-        if let Some(Value::KeyValueType(kv)) = value {
-            find_keys(&kv, &keys[1..])
-        } else {
-            None
-        }
+        None
     }
 }
 
@@ -314,7 +312,7 @@ fn read_string<R: std::io::Read>(reader: &mut R, wide: bool) -> Result<String, E
             }
             buf.push(c);
         }
-        return Ok(std::string::String::from_utf16_lossy(&buf).to_string());
+        Ok(std::string::String::from_utf16_lossy(&buf).to_string())
     } else {
         let mut buf: Vec<u8> = vec![];
         loop {
@@ -324,6 +322,6 @@ fn read_string<R: std::io::Read>(reader: &mut R, wide: bool) -> Result<String, E
             }
             buf.push(c);
         }
-        return Ok(std::string::String::from_utf8_lossy(&buf).to_string());
+        Ok(std::string::String::from_utf8_lossy(&buf).to_string())
     }
 }
