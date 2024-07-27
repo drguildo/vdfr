@@ -51,16 +51,14 @@ fn main() {
             } else {
                 eprintln!("Failed to find app with ID {}", id);
             }
+        } else if let Some(keys) = matches.get_many::<String>("keys") {
+            let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
+            for (id, app) in appinfo.apps {
+                println!("{}: {:?}", id, app.get(&keys));
+            }
         } else {
-            if let Some(keys) = matches.get_many::<String>("keys") {
-                let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
-                for (id, app) in appinfo.apps {
-                    println!("{}: {:?}", id, app.get(&keys));
-                }
-            } else {
-                for (id, app) in appinfo.apps {
-                    println!("{}: {:?}", id, app);
-                }
+            for (id, app) in appinfo.apps {
+                println!("{}: {:?}", id, app);
             }
         }
     }
@@ -81,31 +79,30 @@ fn main() {
             } else {
                 eprintln!("Failed to find package with ID {}", id);
             }
+        } else if let Some(keys) = matches.get_many::<String>("keys") {
+            let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
+            for (id, package) in packageinfo.packages {
+                println!("{}: {:?}", id, package.get(&keys));
+            }
         } else {
-            if let Some(keys) = matches.get_many::<String>("keys") {
-                let keys: Vec<&str> = keys.map(|s| s.as_str()).collect();
-                for (id, package) in packageinfo.packages {
-                    println!("{}: {:?}", id, package.get(&keys));
-                }
-            } else {
-                for (id, package) in packageinfo.packages {
-                    println!("{}: {:?}", id, package);
-                }
+            for (id, package) in packageinfo.packages {
+                println!("{}: {:?}", id, package);
             }
         }
     }
 }
 
 fn read_appinfo(path: &str) -> AppInfo {
-    let mut appinfo_file =
-        BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
-    let appinfo = vdfr::AppInfo::load(&mut appinfo_file);
-    return appinfo.unwrap();
+    let appinfo_file = fs::File::open(path).unwrap_or_else(|_| panic!("Failed to read {}", path));
+    let mut appinfo_reader = BufReader::new(appinfo_file);
+    let appinfo = vdfr::AppInfo::read(&mut appinfo_reader);
+    appinfo.unwrap()
 }
 
 fn read_packageinfo(path: &str) -> PackageInfo {
-    let mut packageinfo_file =
-        BufReader::new(fs::File::open(path).expect(&format!("Failed to read {}", path)));
-    let packageinfo = vdfr::PackageInfo::load(&mut packageinfo_file);
-    return packageinfo.unwrap();
+    let packageinfo_file =
+        fs::File::open(path).unwrap_or_else(|_| panic!("Failed to read {}", path));
+    let mut packageinfo_reader = BufReader::new(packageinfo_file);
+    let packageinfo = vdfr::PackageInfo::read(&mut packageinfo_reader);
+    packageinfo.unwrap()
 }

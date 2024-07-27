@@ -1,4 +1,8 @@
-use std::{collections::HashMap, io::Error};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, Error, Read, Seek},
+};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -14,8 +18,12 @@ const BIN_END: u8 = b'\x08';
 const BIN_INT64: u8 = b'\x0A';
 const BIN_END_ALT: u8 = b'\x0B';
 
+const VERSION_28: u32 = 0x7564428;
+const VERSION_29: u32 = 0x7564429;
+
 #[derive(Debug)]
 pub enum VdfrError {
+    UnsupportedVersion(u32),
     InvalidType(u8),
     ReadError(std::io::Error),
 }
@@ -25,6 +33,7 @@ impl std::error::Error for VdfrError {}
 impl std::fmt::Display for VdfrError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            VdfrError::UnsupportedVersion(v) => write!(f, "Invalid version {:#x}", v),
             VdfrError::InvalidType(t) => write!(f, "Invalid type {:#x}", t),
             VdfrError::ReadError(e) => e.fmt(f),
         }
@@ -56,7 +65,7 @@ type KeyValues = HashMap<String, Value>;
 // The order of the keys dictates the hierarchy, with all except the last having
 // to be a Value::KeyValueType.
 fn find_keys<'a>(kv: &'a KeyValues, keys: &[&str]) -> Option<&'a Value> {
-    if keys.len() == 0 {
+    if keys.is_empty() {
         return None;
     }
 
@@ -64,12 +73,10 @@ fn find_keys<'a>(kv: &'a KeyValues, keys: &[&str]) -> Option<&'a Value> {
     let value = kv.get(&key.to_string());
     if keys.len() == 1 {
         value
+    } else if let Some(Value::KeyValueType(kv)) = value {
+        find_keys(kv, &keys[1..])
     } else {
-        if let Some(Value::KeyValueType(kv)) = value {
-            find_keys(&kv, &keys[1..])
-        } else {
-            None
-        }
+        None
     }
 }
 
@@ -93,9 +100,20 @@ pub struct AppInfo {
 }
 
 impl AppInfo {
-    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<AppInfo, VdfrError> {
+    pub fn read(reader: &mut BufReader<File>) -> Result<AppInfo, VdfrError> {
         let magic = reader.read_u32::<LittleEndian>()?;
+
+        if ![VERSION_28, VERSION_29].contains(&magic) {
+            return Err(VdfrError::UnsupportedVersion(magic));
+        }
+
         let universe = reader.read_u32::<LittleEndian>()?;
+
+        let string_table = if magic == VERSION_29 {
+            Some(AppInfo::read_string_table(reader)?)
+        } else {
+            None
+        };
 
         let mut appinfo = AppInfo {
             universe,
@@ -122,7 +140,7 @@ impl AppInfo {
             let mut checksum_bin: [u8; 20] = [0; 20];
             reader.read_exact(&mut checksum_bin)?;
 
-            let key_values = read_kv(reader, false)?;
+            let key_values = read_kv(reader, false, &string_table)?;
 
             let app = App {
                 size,
@@ -138,6 +156,24 @@ impl AppInfo {
         }
 
         Ok(appinfo)
+    }
+
+    fn read_string_table(reader: &mut BufReader<File>) -> Result<Vec<String>, std::io::Error> {
+        let string_table_offset = reader.read_i64::<LittleEndian>()?;
+        let original_seek_position = reader.stream_position()?;
+        reader.seek(std::io::SeekFrom::Start(string_table_offset as u64))?;
+        let num_strings = reader.read_u32::<LittleEndian>()?;
+        let mut string_table_bytes: Vec<u8> = Vec::new();
+        reader.read_to_end(&mut string_table_bytes)?;
+        let string_table: Vec<String> = string_table_bytes
+            .split(|&byte| byte == 0)
+            .filter(|subslice| !subslice.is_empty()) // Filter out any empty slices (if any)
+            .map(|subslice| String::from_utf8_lossy(subslice).into_owned()) // Convert each subslice to a String
+            .collect();
+        assert!(string_table.len() == num_strings as usize);
+        reader.seek(std::io::SeekFrom::Start(original_seek_position))?;
+
+        Ok(string_table)
     }
 }
 
@@ -163,7 +199,7 @@ pub struct PackageInfo {
 }
 
 impl PackageInfo {
-    pub fn load<R: std::io::Read>(reader: &mut R) -> Result<PackageInfo, VdfrError> {
+    pub fn read(reader: &mut BufReader<File>) -> Result<PackageInfo, VdfrError> {
         let magic = reader.read_u32::<LittleEndian>()?;
         let universe = reader.read_u32::<LittleEndian>()?;
 
@@ -188,7 +224,7 @@ impl PackageInfo {
             // XXX: No idea what this is. Seems to get ignored in vdf.py.
             let pics = reader.read_u64::<LittleEndian>()?;
 
-            let key_values = read_kv(reader, false)?;
+            let key_values = read_kv(reader, false, &None)?;
 
             let package = Package {
                 checksum,
@@ -210,7 +246,11 @@ impl Package {
     }
 }
 
-fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValues, VdfrError> {
+fn read_kv<R: std::io::Read>(
+    reader: &mut R,
+    alt_format: bool,
+    string_table: &Option<Vec<String>>,
+) -> Result<KeyValues, VdfrError> {
     let current_bin_end = if alt_format { BIN_END_ALT } else { BIN_END };
 
     let mut node = KeyValues::new();
@@ -221,10 +261,15 @@ fn read_kv<R: std::io::Read>(reader: &mut R, alt_format: bool) -> Result<KeyValu
             return Ok(node);
         }
 
-        let key = read_string(reader, false)?;
+        let key = if let Some(string_table) = string_table {
+            let string_table_index = reader.read_u32::<LittleEndian>()?;
+            string_table[string_table_index as usize].clone()
+        } else {
+            read_string(reader, false)?
+        };
 
         if t == BIN_NONE {
-            let subnode = read_kv(reader, alt_format)?;
+            let subnode = read_kv(reader, alt_format, string_table)?;
             node.insert(key, Value::KeyValueType(subnode));
         } else if t == BIN_STRING {
             let s = read_string(reader, false)?;
@@ -267,7 +312,7 @@ fn read_string<R: std::io::Read>(reader: &mut R, wide: bool) -> Result<String, E
             }
             buf.push(c);
         }
-        return Ok(std::string::String::from_utf16_lossy(&buf).to_string());
+        Ok(std::string::String::from_utf16_lossy(&buf).to_string())
     } else {
         let mut buf: Vec<u8> = vec![];
         loop {
@@ -277,6 +322,6 @@ fn read_string<R: std::io::Read>(reader: &mut R, wide: bool) -> Result<String, E
             }
             buf.push(c);
         }
-        return Ok(std::string::String::from_utf8_lossy(&buf).to_string());
+        Ok(std::string::String::from_utf8_lossy(&buf).to_string())
     }
 }
