@@ -1,7 +1,7 @@
 use std::{fs, io::BufReader};
 
 use clap::{value_parser, Arg, Command};
-use vdfr::{AppInfo, PackageInfo};
+use vdfr::{print_keyvalues, AppInfo, PackageInfo};
 
 fn main() {
     let matches = Command::new(clap::crate_name!())
@@ -95,14 +95,26 @@ fn main() {
 fn read_appinfo(path: &str) -> AppInfo {
     let appinfo_file = fs::File::open(path).unwrap_or_else(|_| panic!("Failed to read {}", path));
     let mut appinfo_reader = BufReader::new(appinfo_file);
-    let appinfo = vdfr::AppInfo::read(&mut appinfo_reader);
-    appinfo.unwrap()
+    let appinfo = vdfr::AppInfo::read(&mut appinfo_reader).unwrap();
+
+    for (appid, app) in &appinfo.apps {
+        println!("{}", appid);
+        print_keyvalues(&app.key_values, 0);
+    }
+
+    appinfo
 }
 
 fn read_packageinfo(path: &str) -> PackageInfo {
     let packageinfo_file =
         fs::File::open(path).unwrap_or_else(|_| panic!("Failed to read {}", path));
     let mut packageinfo_reader = BufReader::new(packageinfo_file);
-    let packageinfo = vdfr::PackageInfo::read(&mut packageinfo_reader);
-    packageinfo.unwrap()
+    let packageinfo = vdfr::PackageInfo::read(&mut packageinfo_reader).unwrap();
+
+    for (packageid, package) in &packageinfo.packages {
+        println!("{}", packageid);
+        print_keyvalues(&package.key_values, 0);
+    }
+
+    packageinfo
 }

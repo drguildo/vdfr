@@ -325,3 +325,23 @@ fn read_string<R: std::io::Read>(reader: &mut R, wide: bool) -> Result<String, E
         Ok(std::string::String::from_utf8_lossy(&buf).to_string())
     }
 }
+
+pub fn print_keyvalues(keyvalues: &KeyValues, depth: usize) {
+    for (key, value) in keyvalues {
+        print!("{}{}: ", " ".repeat(depth), key);
+        match value {
+            Value::StringType(v) => println!("{}", v),
+            Value::WideStringType(v) => println!("{}", v),
+            Value::Int32Type(v) => println!("{}", v),
+            Value::PointerType(v) => println!("{}", v),
+            Value::ColorType(v) => println!("{}", v),
+            Value::UInt64Type(v) => println!("{}", v),
+            Value::Int64Type(v) => println!("{}", v),
+            Value::Float32Type(v) => println!("{}", v),
+            Value::KeyValueType(v) => {
+                println!();
+                print_keyvalues(v, depth + 2);
+            }
+        }
+    }
+}
